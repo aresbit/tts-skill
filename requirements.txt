@@ -1,0 +1,33 @@
+# tts skill 的独立依赖。首次运行时由 scripts/tts.py 用 uv 装进 .venv/。
+#
+# 版本不是随手写的：下面这组在本机 Python 3.13 / arm64 上装通并跑通过。
+#
+# mlx-audio-plus 必须钉 0.1.7：0.1.8 同时声明 "mlx-audio[all]" 和 "transformers<5"，
+# 是一个空集，在任何 Python 上都不该装得上。引擎本体住在 mlx-audio-plus，
+# 不是主线的 mlx-audio（两条线不能共存）。
+mlx-audio-plus==0.1.7
+
+# mlx / mlx-lm 由 mlx-audio-plus 间接拉取，但间接依赖会漂移，这里写死免得某次装出别的组合。
+mlx==0.32.3
+mlx-lm==0.29.1
+
+# 上限不能松：transformers 5.x 改了 CosyVoice3 用到的接口。
+transformers>=4.57,<5
+
+numpy>=2.0
+scipy>=1.14
+soundfile>=0.13
+librosa>=0.11
+einops>=0.8
+tiktoken>=0.7
+
+# 间接依赖，但必须显式写出来：mlx_audio.tts.generate 在 import 时会拉起
+# .audio_player，而它 import sounddevice。不写进清单，问题不会在装的时候暴露，
+# 要等到第一次合成才炸——那时候看起来像是模型或参考音的问题。
+sounddevice==0.5.6
+
+# 同上，第二个「没人声明但运行时需要」的包：mlx_audio.tts.models.cosyvoice2
+# 的 __init__ 顶层执行 from .scripts.convert import ...，而那个脚本顶层
+# import torch。少了它，generate_audio 会把 ImportError 吞掉、只打印一行，
+# 然后正常返回 —— 表现成「合成没有落盘」。
+torch>=2.6
